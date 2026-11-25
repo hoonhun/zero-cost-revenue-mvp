@@ -19,7 +19,7 @@ h2{font-size:19px;line-height:1.35;margin:0 0 16px}.fields{display:grid;grid-tem
 input{width:100%;min-width:0;border:1px solid #cbd5e1;border-radius:10px;padding:11px 12px;font:inherit;background:#fff;color:var(--text)}input:focus{outline:3px solid #315ee822;border-color:var(--accent)}
 .hint{font-size:12px;color:var(--muted)}.results{display:grid;gap:10px}.metric{padding:13px;border:1px solid var(--line);border-radius:13px}.metric .label{font-size:13px;color:var(--muted)}.metric .value{font-size:24px;font-weight:800;letter-spacing:-.03em;margin-top:3px;overflow-wrap:anywhere}.profit{color:var(--good)}.loss{color:var(--bad)}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}.smallmetric .value{font-size:19px}.note{margin-top:14px;background:#f1f5ff;border-radius:12px;padding:12px;color:#344568;font-size:13px}
-button{border:0;border-radius:10px;background:var(--accent);color:white;font-weight:750;padding:11px 14px;font:inherit;cursor:pointer}button.secondary{background:#edf1f7;color:#243247}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+button{border:0;border-radius:10px;background:var(--accent);color:white;font-weight:750;padding:11px 14px;font:inherit;cursor:pointer}button:disabled{opacity:.45;cursor:not-allowed}button.secondary{background:#edf1f7;color:#243247}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
 .content{margin-top:18px}.content h2{margin:0 0 8px}.content p,.content li{color:#425166}.content ul{padding-left:22px}.formula{overflow-wrap:anywhere;background:#f5f7fb;border:1px solid var(--line);border-radius:10px;padding:12px;margin:10px 0;color:#27364a;font-size:14px}
 .error{color:var(--bad);font-size:13px;min-height:1.4em;margin:10px 0 0}.footer{margin-top:18px;color:var(--muted);font-size:12px}
 @media(max-width:720px){.layout{grid-template-columns:1fr}.card{padding:16px}}@media(max-width:400px){.fields,.grid2{grid-template-columns:1fr}}
@@ -39,7 +39,7 @@ button{border:0;border-radius:10px;background:var(--accent);color:white;font-wei
 <div class="field wide"><label for="item">상품명 (선택)</label><input id="item" placeholder="예: 수제 키링"></div>
 <div class="field"><label for="price">판매가 (원)</label><input id="price" type="number" min="0" step="1" value="12000"></div>
 <div class="field"><label for="qty">총 제작 수량</label><input id="qty" type="number" min="1" step="1" value="10"></div>
-<div class="field"><label for="soldQty">실제 판매 수량</label><input id="soldQty" type="number" min="0" step="1" value="5"><span class="hint">총 제작 수량보다 크게 입력하면 제작 수량까지만 계산합니다.</span></div>
+<div class="field"><label for="soldQty">실제 판매 수량</label><input id="soldQty" type="number" min="0" step="1" value="5"><span class="hint">총 제작 수량을 초과할 수 없습니다.</span></div>
 <div class="field"><label for="materials">재료비 (1개당, 원)</label><input id="materials" type="number" min="0" step="1" value="5000"></div>
 <div class="field"><label for="other">기타 원가 (1개당, 원)</label><input id="other" type="number" min="0" step="1" value="1000"></div>
 <div class="field"><label for="fee">판매 수수료 (%)</label><input id="fee" type="number" min="0" max="100" step="0.1" value="3"></div>
@@ -83,11 +83,11 @@ button{border:0;border-radius:10px;background:var(--accent);color:white;font-wei
 <section class="card content">
 <h2>자주 묻는 질문</h2>
 <h3>판매 수량이 제작 수량보다 많으면 어떻게 되나요?</h3>
-<p>계산 시 판매 수량을 제작 수량까지만 반영합니다. 실제 제작한 수량을 입력해 주세요.</p>
+<p>오류 안내가 표시되고 계산이 중단됩니다. 실제 제작한 수량 이하로 수정해 주세요.</p>
 <h3>판매분 순이익은 양수인데 현금흐름은 왜 음수인가요?</h3>
 <p>아직 팔리지 않은 재고의 원가까지 이미 지출했기 때문일 수 있습니다. 재고가 나중에 팔릴 가능성은 별도로 판단해야 합니다.</p>
 <h3>수수료율과 추가 공제율은 어떻게 입력하나요?</h3>
-<p>사용 중인 판매 플랫폼의 공식 안내나 실제 정산 내역을 확인하세요. 두 비율의 합이 100% 이상이면 계산하지 않도록 제한합니다.</p>
+<p>사용 중인 판매 플랫폼의 공식 안내나 실제 정산 내역을 확인하세요. 두 비율의 합이 100% 이상이거나 판매 수량이 제작 수량을 초과하면 계산을 중단하고 오류를 표시합니다.</p>
 <h3>계산 결과가 실제 이익을 보장하나요?</h3>
 <p>아니요. 입력값에 따른 산술 결과일 뿐입니다. 배송비, 포장비, 반품, 환불, 광고비, 세금 등 누락된 비용과 판매 지연은 별도로 고려해야 합니다.</p>
 </section>
@@ -98,15 +98,21 @@ const ids=["item","price","qty","soldQty","materials","other","fee","tax","targe
 const $=id=>document.getElementById(id);
 const fmt=n=>Number.isFinite(n)?Math.round(n).toLocaleString("ko-KR")+"원":"—";
 function num(id){const raw=$(id).value;if(raw.trim()==="")return NaN;const n=Number(raw);return Number.isFinite(n)?n:NaN}
+function invalidate(message){
+ $("error").textContent=message;
+ ["totalProfit","cashFlow","unitProfit","roi","fees","cost","unsoldQty","inventoryCost","breakeven","status"].forEach(id=>{$(id).textContent="—";$(id).className="value";});
+ $("summary").textContent="입력값을 수정하면 결과가 다시 계산됩니다.";
+ $("copy").disabled=true;
+}
 function calculate(){
  const vals=Object.fromEntries(ids.slice(1).map(id=>[id,num(id)]));
- const error=$("error");
- if(Object.values(vals).some(v=>!Number.isFinite(v)||v<0)){error.textContent="모든 숫자 입력란에 0 이상의 값을 입력해 주세요.";return}
- if(vals.qty<1){error.textContent="총 제작 수량은 1개 이상이어야 합니다.";return}
- if(!Number.isInteger(vals.qty)||!Number.isInteger(vals.soldQty)){error.textContent="제작 수량과 판매 수량은 정수로 입력해 주세요.";return}
- if(vals.fee>100||vals.tax>100||vals.fee+vals.tax>=100){error.textContent="수수료율과 추가 공제율의 합은 100% 미만이어야 합니다.";return}
- error.textContent="";
- const price=vals.price,qty=vals.qty,sold=Math.min(qty,vals.soldQty),unsold=qty-sold,costEach=vals.materials+vals.other;
+ if(Object.values(vals).some(v=>!Number.isFinite(v)||v<0)){invalidate("모든 숫자 입력란에 0 이상의 유효한 값을 입력해 주세요.");return}
+ if(vals.qty<1){invalidate("총 제작 수량은 1개 이상이어야 합니다.");return}
+ if(!Number.isInteger(vals.qty)||!Number.isInteger(vals.soldQty)){invalidate("총 제작 수량과 실제 판매 수량은 정수로 입력해 주세요.");return}
+ if(vals.soldQty>vals.qty){invalidate("실제 판매 수량은 총 제작 수량을 초과할 수 없습니다.");return}
+ if(vals.fee>100||vals.tax>100||vals.fee+vals.tax>=100){invalidate("판매 수수료율과 추가 공제율의 합은 100% 미만이어야 합니다.");return}
+ $("error").textContent="";$("copy").disabled=false;
+ const price=vals.price,qty=vals.qty,sold=vals.soldQty,unsold=qty-sold,costEach=vals.materials+vals.other;
  const gross=price*sold,feeTotal=gross*vals.fee/100,taxTotal=gross*vals.tax/100,net=gross-feeTotal-taxTotal;
  const soldCost=costEach*sold,totalCost=costEach*qty,profit=net-soldCost,cash=net-totalCost,inventory=costEach*unsold;
  const unit=sold?profit/sold:NaN,roi=soldCost?profit/soldCost*100:NaN,minimum=(costEach+vals.target)/(1-(vals.fee+vals.tax)/100);
